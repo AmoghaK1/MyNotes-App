@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notes App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  </head>
+  <body>
+    <nav class="navbar navbar-dark navbar-expand-lg bg-dark">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Navbar</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+              <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="">Home</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#">About</a>
+              </li>
+              
+            </ul>
+            <div>
+              <div id="authButtons">
+                <a href="login"><button class="btn btn-primary mx-2" type="submit">Log In</button></a>
+                <a href="signup"><button class="btn btn-primary mx-2" type="submit">Sign Up</button></a>
+              </div>
+              <button id="logoutBtn" class="btn btn-danger mx-2" style="display:none;">Log Out</button>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <div class="container">
+        <h1 class="my-3">My Notes</h1>
+        <button id="addNoteBtn" class="btn btn-secondary my-3">Add a Note</button>
+        
+        <div id="addNoteSection" style="display: none;">
+          <h2 class="my-3">Add a Note</h2>
+          <div>
+            <div class="mb-3">
+              <label for="title" class="form-label">Title</label>
+              <input type="title" class="form-control" id="title" aria-describedby="titleHelp">
+              <div id="titleHelp" class="form-text">Try to add a catchy title</div>
+            </div>
+            <div class="mb-3">
+              <label for="desc" class="form-label">Description</label>
+              <textarea type="text" class="form-control" id="desc"></textarea>
+            </div>
+            <button id="submit" type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </div>
+        
+        <div class="mynotes row"></div>
+      </div>
+     
+    
+    
+    
+    
+    
+    
+    <script>
+        const addNoteBtn = document.getElementById('addNoteBtn');
+  const addNoteSection = document.getElementById('addNoteSection');
+  
+  addNoteBtn.addEventListener('click', () => {
+    if(!localStorage.key('user')){
+      alert("Please login first!")
+      window.location.href = '/login';
+      
+    } else {
+
+      addNoteSection.style.display = addNoteSection.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+  const user1 = JSON.parse(localStorage.getItem('user'));
+  const authButtons = document.getElementById('authButtons');
+  const logoutBtn = document.getElementById('logoutBtn');
+  
+  if (user1?.email) {
+    authButtons.style.display = 'none';
+    logoutBtn.style.display = 'block';
+  }
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('user');
+    window.location.reload(); // Reload page after logout
+  });
+  
+        async function PostData(url = '', data={}) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+                
+        });
+        let ndata = await response.json()
+        return ndata;
+        }
+        // if(!user.token){
+        //     window.location = '/login';
+        // }
+        
+          const user = JSON.parse(localStorage.getItem('user'));
+          if(user?.email){
+      const notes = PostData('/getnotes', {email: user.email});
+      notes.then((notes) => {
+          console.log("NOTES", notes.notes);
+          // Populate the notes
+          notes.notes.forEach(element => {
+              let note = `
+              <div class="card mx-3" style="width: 18rem;">
+                  <div class="card-body">
+                      <h5 class="card-title">${element.title}</h5>
+                      <p class="card-text">${element.desc}</p>
+                      <button class="btn btn-primary" onclick="editNote('${element._id}', '${element.title}', '${element.desc}')">Update</button>
+                    <button class="btn btn-danger" onclick="deleteNote('${element._id}')">Delete</button>
+                </div>
+                  </div>
+              </div>`;
+              let noteContainer = document.querySelector(".mynotes");
+              noteContainer.innerHTML += note;
+          });
+      });
+          
+        }
+
+
+        
+
+        let submit = document.getElementById('submit');
+        submit.addEventListener('click', async () => {
+            let title = document.getElementById('title').value;
+            let desc = document.getElementById('desc').value;
+            let email = JSON.parse(localStorage.getItem("user"))?.email
+            console.log("Submitting this data...", title, desc, email);
+            let resp = await PostData('/addnote', {title, desc, email})
+            if(resp.success){
+                alert("Note created!")
+                document.getElementById("title").value = ""
+                document.getElementById("desc").value = ""
+                let newNote = `
+                <div class="card mx-3" style="width: 18rem;">
+                 <div class="card-body">
+                <h5 class="card-title">${title}</h5>
+                <p class="card-text">${desc}</p>
+                <a href="#" class="card-link">Card link</a>
+                <a href="#" class="card-link">Another link</a>
+                </div>
+                </div>`;
+    
+            let noteContainer = document.querySelector(".mynotes");
+            noteContainer.innerHTML += newNote;
+            }
+        })
+        async function deleteNote(noteId) {
+        let resp = await PostData('/deletenote', { noteId });
+        if (resp.success) {
+          alert('Note deleted successfully');
+          window.location.reload(); // Reload the page to reflect changes
+        } else {
+          alert('Failed to delete note');
+        }
+        }
+        function editNote(noteId, currentTitle, currentDesc) {
+          let title = prompt("Edit Title:", currentTitle);
+          let desc = prompt("Edit Description:", currentDesc);
+
+          if (title && desc) {
+            PostData('/updatenote', { noteId, title, desc }).then(resp => {
+              if (resp.success) {
+                alert('Note updated successfully');
+                window.location.reload();
+              } else {
+                alert('Failed to update note');
+              }
+            });
+          }
+        }
+
+
+    </script>
+    
+    
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  </body>
+</html>
