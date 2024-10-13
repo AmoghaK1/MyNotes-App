@@ -1,5 +1,7 @@
 const express = require('express')
 const app = express()
+app.use(express.static('public'));
+
 const mongoose = require('mongoose')
 const User = require('./models/User')
 const Note = require('./models/Note')
@@ -55,16 +57,9 @@ app.post('/signup', async(req,res) => {
 })
 
 app.post('/addnote', async (req,res) => {
-    if(!localStorage.key('user')){
-        alert("Please login first")
-        res.sendFile("Pages/login.html", {root: __dirname});
-    } else {
-        const {userToken} = req.body;
+    const {userToken} = req.body;
         let note = await Note.create(req.body)
         res.status(200).json({success:true,note})
-        
-
-    }
 })
 
 app.post('/deletenote', async (req,res) => {
@@ -87,6 +82,8 @@ app.post('/updatenote', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+
 
 
 
